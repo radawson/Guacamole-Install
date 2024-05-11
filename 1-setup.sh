@@ -252,13 +252,13 @@ fi
 # Uncomment here to force a specific Tomcat version.
 # TOMCAT_VERSION="tomcat9"
 
-# Workaround for issue #31
+# Workaround for 1.5.4 specific bug, see issue #31. This was fixed in 1.5.5
 if [[ "${OS_NAME,,}" = "debian" && "${OS_CODENAME,,}" = *"bullseye"* ]] || [[ "${OS_NAME,,}" = "ubuntu" && "${OS_CODENAME,,}" = *"focal"* ]]; then
     IFS='.' read -ra guac_version_parts <<< "${GUAC_VERSION}"
     major="${guac_version_parts[0]}"
     minor="${guac_version_parts[1]}"
     patch="${guac_version_parts[2]}"
-    # Assume this will be correctly fixed in 1.5.5 and is a 1.5.4 specific bug. Uncomment 2nd line if issue persists >=1.5.4 (See https://issues.apache.org/jira/browse/GUACAMOLE-1892))
+    # Uncomment 2nd line and comment first line if issue returns >=1.5.4 (See https://issues.apache.org/jira/browse/GUACAMOLE-1892))
 	if (( major == 1 && minor == 5 && patch == 4 )); then
 	#if (( major > 1 || (major == 1 && minor > 5) || ( major == 1 && minor == 5 && patch >= 4 ) )); then
       export LDFLAGS="-lrt"
