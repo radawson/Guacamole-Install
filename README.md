@@ -12,7 +12,7 @@ This suite of build and management scripts makes setting up a secure Guacamole j
 <img src="https://github.githubassets.com/images/icons/emoji/rocket.png" width="23"> To start building your Guacamole appliance, paste the below link into a terminal and just follow the option prompts **(no need for sudo, but you must be a member of the sudo group)**:
 
 ```shell
-wget https://raw.githubusercontent.com/itiligent/Guacamole-Install/main/1-setup.sh && chmod +x 1-setup.sh && ./1-setup.sh
+wget https://raw.githubusercontent.com/radawson/Guacamole-Install/main/1-setup.sh && chmod +x 1-setup.sh && ./1-setup.sh
 ```
 
 ## Prerequisites 
