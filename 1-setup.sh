@@ -79,7 +79,7 @@ mkdir -p $DOWNLOAD_DIR
 mkdir -p $DB_BACKUP_DIR
 
 # GitHub download branch
-GITHUB="https://raw.githubusercontent.com/itiligent/Guacamole-Install/main"
+GITHUB="https://raw.githubusercontent.com/radawson/Guacamole-Install/main"
 
 # Version of Guacamole to install
 GUAC_VERSION="1.5.5"
