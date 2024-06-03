@@ -18,6 +18,11 @@ pre {
     border: 1px solid #000000;
 }
 
+/* Icons */
+.fa {
+    color: #ececec;
+}
+
 a[href]:visited {
     color: #88bf5b;
 }

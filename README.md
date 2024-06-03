@@ -82,7 +82,7 @@ wget https://raw.githubusercontent.com/radawson/Guacamole-Install/main/1-setup.s
 
 ## Upgrading Guacamole
 
-<img src="https://github.githubassets.com/images/icons/emoji/globe_with_meridians.png" width="23"> To upgrade, edit `upgrade-guac.sh` to relfect the latest versions of Guacamole, MySQL connector/J before running. This script will also automatically update any optional pre-existing extensions if present (TOTP, DUO, LDAP, Quick Connect and History Recorded Storage.)
+<img src="https://github.githubassets.com/images/icons/emoji/globe_with_meridians.png" width="23"> To upgrade, edit `upgrade-guac.sh` to reflect the latest versions of Guacamole, MySQL connector/J before running. This script will also automatically update any optional pre-existing extensions if present (TOTP, DUO, LDAP, Quick Connect and History Recorded Storage.)
 
 ## High Availability Deployment 
 
