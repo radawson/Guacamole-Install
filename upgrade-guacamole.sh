@@ -50,10 +50,10 @@ mkdir -p $DOWNLOAD_DIR
 chown -R $SUDO_USER:root $DOWNLOAD_DIR
 
 # Version of Guacamole to upgrade to. See https://guacamole.apache.org/releases/ for latest version info.
-NEW_GUAC_VERSION="1.5.5"
+NEW_GUAC_VERSION="1.6.0"
 
 # MySQL Connector/J version. See https://dev.mysql.com/downloads/connector/j/ for latest version number.
-NEW_MYSQLJCON="8.3.0"
+NEW_MYSQLJCON="9.3.0"
 
 # Get the currently installed Tomcat version.
 TOMCAT_VERSION=$(ls /etc/ | grep tomcat)
@@ -75,15 +75,19 @@ GUAC_USER=
 GUAC_PWD=
 GUAC_DB=
 MYSQL_ROOT_PWD=
+RDP_SHARE_HOST=
+RDP_SHARE_LABEL=
+RDP_PRINTER_LABEL=
+GUACD_ACCOUNT=
 
 # Standardise on a distro version identification lexicon
 source /etc/os-release
-OS_NAME=$ID
-OS_VERSION=$VERSION_ID
-OS_CODENAME=$VERSION_CODENAME
+ID=$ID
+VERSION_ID=$VERSION_ID
+VERSION_CODENAME=$VERSION_CODENAME
 
 # Workaround for issue #31
-if [[ "${OS_NAME,,}" = "debian" && "${OS_CODENAME,,}" = *"bullseye"* ]] || [[ "${OS_NAME,,}" = "ubuntu" && "${OS_CODENAME,,}" = *"focal"* ]]; then
+if [[ "${ID,,}" = "debian" && "${VERSION_CODENAME,,}" = *"bullseye"* ]] || [[ "${ID,,}" = "ubuntu" && "${VERSION_CODENAME,,}" = *"focal"* ]]; then
     IFS='.' read -ra guac_version_parts <<< "${GUAC_VERSION}"
     major="${guac_version_parts[0]}"
     minor="${guac_version_parts[1]}"
@@ -97,7 +101,7 @@ fi
 
 # Script branding header
 echo
-echo -e "${GREYB}Guacamole Appliance Auto Upgrade Script."
+echo -e "${GREYB}Guacamole Appliance Auto Upgrade Script"
 echo -e "                             ${LGREEN}Powered by Itiligent"
 echo
 
@@ -167,6 +171,11 @@ else
 fi
 echo -e "${LGREEN}Downloaded guacamole-server-${NEW_GUAC_VERSION}.tar.gz${GREY}"
 
+# Add customised RDP share names and printer labels, remove Guacamole default labelling
+sed -i -e 's/IDX_CLIENT_NAME, "Guacamole RDP"/IDX_CLIENT_NAME, "'"${RDP_SHARE_HOST}"'"/' ${DOWNLOAD_DIR}/guacamole-server-${NEW_GUAC_VERSION}/src/protocols/rdp/settings.c
+sed -i -e 's/IDX_DRIVE_NAME, "Guacamole Filesystem"/IDX_DRIVE_NAME, "'"${RDP_SHARE_LABEL}"'"/' ${DOWNLOAD_DIR}/guacamole-server-${NEW_GUAC_VERSION}/src/protocols/rdp/settings.c
+sed -i -e 's/IDX_PRINTER_NAME, "Guacamole Printer"/IDX_PRINTER_NAME, "'"${RDP_PRINTER_LABEL}"'"/' ${DOWNLOAD_DIR}/guacamole-server-${NEW_GUAC_VERSION}/src/protocols/rdp/settings.c
+
 # Make and install guacd (Guacamole-Server)
 cd guacamole-server-${NEW_GUAC_VERSION}/
 echo
@@ -222,7 +231,12 @@ if [[ "${INSTALL_MYSQL}" = true ]]; then
         FILEVERSION=$(echo ${FILE} | grep -oP 'upgrade-pre-\K[0-9\.]+(?=\.)')
         if [[ $(echo -e "${FILEVERSION}\n${OLD_GUAC_VERSION}" | sort -V | head -n1) == ${OLD_GUAC_VERSION} && ${FILEVERSION} != ${OLD_GUAC_VERSION} ]]; then
             echo "Patching ${GUAC_DB} with ${FILE}"
-            mysql -u root -D ${GUAC_DB} -h ${MYSQL_HOST} -P ${MYSQL_PORT} <guacamole-auth-jdbc-${NEW_GUAC_VERSION}/mysql/schema/upgrade/${FILE} &>>${INSTALL_LOG}
+
+    		if [[ ! -z "$MYSQL_ROOT_PWD" ]]; then
+                	mysql -u root -p${MYSQL_ROOT_PWD} -D ${GUAC_DB} -h ${MYSQL_HOST} -P ${MYSQL_PORT} <guacamole-auth-jdbc-${NEW_GUAC_VERSION}/mysql/schema/upgrade/${FILE} &>>${INSTALL_LOG}
+            	else
+			mysql -u root -D ${GUAC_DB} -h ${MYSQL_HOST} -P ${MYSQL_PORT} <guacamole-auth-jdbc-${NEW_GUAC_VERSION}/mysql/schema/upgrade/${FILE} &>>${INSTALL_LOG}
+	    	fi
         fi
     done
     if [[ $? -ne 0 ]]; then
@@ -334,16 +348,20 @@ for file in /etc/guacamole/extensions/guacamole-history-recording-storage*.jar; 
     fi
 done
 
-# Setup freerdp profile permissions for storing certificates
-mkdir -p /usr/sbin/.config/freerdp
-chown daemon:daemon /usr/sbin/.config/freerdp
-
-# Setup correct permissions for history recorded storage feature
-mkdir -p /var/guacamole
-chown daemon:daemon /var/guacamole
-
 # Bring guacd and Tomcat back up
 echo -e "${GREY}Starting guacd and Tomcat services..."
+
+# Reset freerdp profile permissions for storing certificates
+mkdir -p /home/"${GUACD_ACCOUNT}"/.config/freerdp
+chown ${GUACD_ACCOUNT}:${GUACD_ACCOUNT} /home/"${GUACD_ACCOUNT}"/.config/freerdp
+
+# Reset guacamole permissions
+mkdir -p /var/guacamole
+chown "${GUACD_ACCOUNT}":"${GUACD_ACCOUNT}" /var/guacamole
+
+# Reset the guacd systemd unit file's default service account 
+sudo sed -i "s/\bdaemon\b/${GUACD_ACCOUNT}/g" /etc/systemd/system/guacd.service
+systemctl daemon-reload
 systemctl enable guacd
 systemctl start guacd
 systemctl start ${TOMCAT_VERSION}

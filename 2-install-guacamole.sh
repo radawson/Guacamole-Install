@@ -59,7 +59,7 @@ if [[ -n "${MYSQL_VERSION}" ]]; then
     echo -e "${GREY}Adding the official MariaDB repository and installing version ${MYSQL_VERSION}..."
     # Add the Official MariaDB repo.
     apt-get -qq -y install curl gnupg2 &>>${INSTALL_LOG}
-    curl -LsS -O ${MARIADB_LINK} &>>${INSTALL_LOG}
+    curl -LsS -O ${MARIADB_SOURCE_LINK} &>>${INSTALL_LOG}
     bash mariadb_repo_setup --mariadb-server-version=$MYSQL_VERSION &>>${INSTALL_LOG}
     if [[ $? -ne 0 ]]; then
         echo -e "${LRED}Failed. See ${INSTALL_LOG}${GREY}" 1>&2
@@ -98,9 +98,9 @@ spinner() {
   printf "       "
   tput rc
 }
-apt-get -qq -y install ${MYSQLPKG} ${TOMCAT_VERSION} ${TOMCAT_VERSION}-admin ${JPEGTURBO} ${LIBPNG} ufw pwgen expect \
+apt-get -qq -y install ${MYSQLPKG} ${TOMCAT_VERSION} ${TOMCAT_VERSION}-admin ${JPEGTURBO} ${LIBPNG} ${FREERDP} ufw pwgen expect \
     build-essential libcairo2-dev libtool-bin uuid-dev libavcodec-dev libavformat-dev libavutil-dev \
-    libswscale-dev freerdp2-dev libpango1.0-dev libssh2-1-dev libtelnet-dev libvncserver-dev libwebsockets-dev \
+    libswscale-dev libpango1.0-dev libssh2-1-dev libtelnet-dev libvncserver-dev libwebsockets-dev \
     libpulse-dev libssl-dev libvorbis-dev libwebp-dev ghostscript &>>${INSTALL_LOG} &
 command_pid=$!
 spinner $command_pid
@@ -166,10 +166,10 @@ else
 fi
 
 # Download MySQL connector/j
-wget -q --show-progress -O mysql-connector-j-${MYSQLJCON}.tar.gz ${MYSQLJCON_LINK}
+wget -q --show-progress -O mysql-connector-j-${MYSQLJCON}.tar.gz ${MYSQLJCON_SOURCE_LINK}
 if [[ $? -ne 0 ]]; then
     echo -e "${LRED}Failed to download mysql-connector-j-${MYSQLJCON}.tar.gz" 1>&2
-    echo -e "${MYSQLJCON_LINK}${GREY}"
+    echo -e "${MYSQLJCON_SOURCE_LINK}${GREY}"
     exit 1
 else
     tar -xzf mysql-connector-j-${MYSQLJCON}.tar.gz
@@ -268,19 +268,31 @@ rm -rf /etc/guacamole/extensions/
 mkdir -p /etc/guacamole/lib/
 mkdir -p /etc/guacamole/extensions/
 
-# Setup freerdp profile permissions for storing certificates
-mkdir -p /usr/sbin/.config/freerdp
-chown daemon:daemon /usr/sbin/.config/freerdp
+# Create a custom guacd service account and heavily lock it down
+adduser "${GUACD_ACCOUNT}" --disabled-password --disabled-login --gecos "" > /dev/null 2>&1
+gpasswd -d "${GUACD_ACCOUNT}" users > /dev/null 2>&1
+echo -e "\nMatch User ${GUACD_ACCOUNT}\n    X11Forwarding no\n    AllowTcpForwarding no\n    PermitTTY no\n    ForceCommand cvs server" | sudo tee -a /etc/ssh/sshd_config > /dev/null 2>&1
+systemctl restart ssh
+touch "${CRON_DENY_FILE}"
+chmod 644 "${CRON_DENY_FILE}"
+chown root:root "${CRON_DENY_FILE}"
+if ! grep -q "^${GUACD_ACCOUNT}$" "${CRON_DENY_FILE}"; then
+   echo "$GUACD_ACCOUNT" | sudo tee -a "$CRON_DENY_FILE" > /dev/null 2>&1
+fi
 
-# Setup correct permissions for history recorded storage feature
+# Setup freerdp profile permissions for storing certificates
+mkdir -p /home/"${GUACD_ACCOUNT}"/.config/freerdp
+chown ${GUACD_ACCOUNT}:${GUACD_ACCOUNT} /home/"${GUACD_ACCOUNT}"/.config/freerdp
+
+# Setup guacamole permissions
 mkdir -p /var/guacamole
-chown daemon:daemon /var/guacamole
+chown "${GUACD_ACCOUNT}":"${GUACD_ACCOUNT}" /var/guacamole
 
 # Make and install guacd (Guacamole-Server)
-cd guacamole-server-${GUAC_VERSION}/
 echo
 echo -e "${GREY}Compiling Guacamole-Server from source with with GCC $(gcc --version | head -n1 | grep -oP '\)\K.*' | awk '{print $1}'), this might take a few minutes...${GREY}"
 
+cd guacamole-server-${GUAC_VERSION}/
 # Skip any deprecated software warnings various distros may throw during build
 export CFLAGS="-Wno-error"
 
@@ -487,7 +499,7 @@ if [[ "${INSTALL_HISTREC}" = true ]]; then
     chmod 664 /etc/guacamole/extensions/guacamole-history-recording-storage-${GUAC_VERSION}.jar
     #Setup the default recording path
     mkdir -p ${HISTREC_PATH}
-    chown daemon:tomcat ${HISTREC_PATH}
+    chown ${GUACD_ACCOUNT}:tomcat ${HISTREC_PATH}
     chmod 2750 ${HISTREC_PATH}
     echo "recording-search-path: ${HISTREC_PATH}" >>/etc/guacamole/guacamole.properties
     if [[ $? -ne 0 ]]; then
@@ -690,6 +702,9 @@ fi
 
 # Ensure guacd is started
 echo -e "${GREY}Starting guacd service & enable at boot..."
+# Update the systemd unit file the default daemon to the chosen service account 
+sudo sed -i "s/\bdaemon\b/${GUACD_ACCOUNT}/g" /etc/systemd/system/guacd.service
+systemctl daemon-reload
 systemctl enable guacd
 systemctl stop guacd 2>/dev/null
 systemctl start guacd
