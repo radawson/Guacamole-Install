@@ -793,6 +793,7 @@ export DOMAIN_SUFFIX=$DOMAIN_SUFFIX
 export CRON_DENY_FILE=$CRON_DENY_FILE
 
 # Run the Guacamole install script (with all exported variables from this current shell)
+env
 sudo -E ./2-install-guacamole.sh
 if [[ $? -ne 0 ]]; then
     echo -e "${LRED}2-install-guacamole.sh FAILED. See ${INSTALL_LOG}${GREY}" 1>&2
