@@ -36,7 +36,19 @@ spinner() {
   printf "       "
   tput rc
 }
-# We already ran apt-get update from the 1st setup script, now we begin to upgrade packages
+# Run apt-get update again to ensure we have the latest packages if we added any repositories in step 1
+echo -e "${GREY}Updating repositories..."
+apt-get update -qq &>>${INSTALL_LOG} &
+command_pid=$!
+spinner $command_pid
+if [[ $? -ne 0 ]]; then
+    echo -e "${LRED}Failed. See ${INSTALL_LOG}${GREY}" 1>&2
+    exit 1
+else
+    echo -e "${LGREEN}OK${GREY}"
+    echo
+fi
+echo -e "${GREY}Upgrading packages..."
 apt-get upgrade -qq -y &>>${INSTALL_LOG} &
 command_pid=$!
 spinner $command_pid
