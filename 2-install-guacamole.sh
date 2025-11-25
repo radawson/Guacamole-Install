@@ -539,6 +539,56 @@ else
     echo
 fi
 
+# Configure Tomcat admin access for guacadmin user
+echo -e "${GREY}Configuring Tomcat admin access for guacadmin user..."
+TOMCAT_USERS_XML="/etc/${TOMCAT_VERSION}/tomcat-users.xml"
+if [[ -f "${TOMCAT_USERS_XML}" ]]; then
+    # Backup the original file
+    cp "${TOMCAT_USERS_XML}" "${TOMCAT_USERS_XML}.bak" &>>${INSTALL_LOG}
+    
+    # Use default guacadmin password (matches default Guacamole admin password)
+    # Users should change this in tomcat-users.xml if they changed the Guacamole admin password
+    TOMCAT_ADMIN_PWD="guacadmin"
+    
+    # Check if roles already exist, if not add them (before closing tag)
+    if ! grep -q 'rolename="manager-gui"' "${TOMCAT_USERS_XML}"; then
+        # Insert manager-gui role before closing </tomcat-users> tag
+        sed -i '/<\/tomcat-users>/i\
+  <role rolename="manager-gui"/>\
+' "${TOMCAT_USERS_XML}"
+    fi
+    if ! grep -q 'rolename="admin-gui"' "${TOMCAT_USERS_XML}"; then
+        # Insert admin-gui role before closing </tomcat-users> tag
+        sed -i '/<\/tomcat-users>/i\
+  <role rolename="admin-gui"/>\
+' "${TOMCAT_USERS_XML}"
+    fi
+    
+    # Remove existing guacadmin user entry if it exists (handles both active and commented entries)
+    sed -i '/<user username="guacadmin"/d' "${TOMCAT_USERS_XML}"
+    
+    # Add guacadmin user with manager and admin roles (before closing tag)
+    sed -i '/<\/tomcat-users>/i\
+  <user username="guacadmin" password="'"${TOMCAT_ADMIN_PWD}"'" roles="manager-gui,admin-gui"/>\
+' "${TOMCAT_USERS_XML}"
+    
+    if [[ $? -ne 0 ]]; then
+        echo -e "${LRED}Failed to configure Tomcat admin access${GREY}" 1>&2
+        # Restore backup on failure
+        mv "${TOMCAT_USERS_XML}.bak" "${TOMCAT_USERS_XML}" &>>${INSTALL_LOG}
+    else
+        echo -e "${LGREEN}Tomcat admin configured - guacadmin user can access Manager and Host Manager${GREY}"
+        echo -e "${LYELLOW}Access Manager at: http://localhost:8080/manager/html${GREY}"
+        echo -e "${LYELLOW}Access Host Manager at: http://localhost:8080/host-manager/html${GREY}"
+        echo -e "${LYELLOW}Note: If you changed the Guacamole admin password, update the password in ${TOMCAT_USERS_XML}${GREY}"
+        rm -f "${TOMCAT_USERS_XML}.bak" &>>${INSTALL_LOG}
+    fi
+    echo
+else
+    echo -e "${LYELLOW}Warning: ${TOMCAT_USERS_XML} not found. Tomcat admin configuration skipped.${GREY}"
+    echo
+fi
+
 # Restart Tomcat
 echo -e "${GREY}Restarting Tomcat service & enable at boot..."
 systemctl restart ${TOMCAT_VERSION}
