@@ -15,6 +15,11 @@ LGREEN='\033[0;92m'
 LYELLOW='\033[0;93m'
 NC='\033[0m' #No Colour
 
+# Set the Tomcat version to install
+TOMCAT_VERSION="9.0.112"
+# Set the Tomcat source link
+TOMCAT_SOURCE_LINK="https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin"
+
 
 # Update everything but don't do the annoying prompts during apt installs
 echo -e "${GREY}Updating base Linux OS..."
@@ -110,12 +115,14 @@ spinner() {
   printf "       "
   tput rc
 }
-apt-get -qq -y install ${MYSQLPKG} ${TOMCAT_VERSION} ${TOMCAT_VERSION}-admin ${JPEGTURBO} ${LIBPNG} ${FREERDP} ufw pwgen expect \
+# Install dependencies except TOMCAT
+apt-get -qq -y install ${MYSQLPKG} ${JPEGTURBO} ${LIBPNG} ${FREERDP} ufw pwgen expect openjdk-21-jdk\
     build-essential libcairo2-dev libtool-bin uuid-dev libavcodec-dev libavformat-dev libavutil-dev \
     libswscale-dev libpango1.0-dev libssh2-1-dev libtelnet-dev libvncserver-dev libwebsockets-dev \
     libpulse-dev libssl-dev libvorbis-dev libwebp-dev ghostscript &>>${INSTALL_LOG} &
 command_pid=$!
 spinner $command_pid
+wait $command_pid
 if [[ $? -ne 0 ]]; then
     echo -e "${LRED}Failed. See ${INSTALL_LOG}${GREY}" 1>&2
     exit 1
@@ -123,6 +130,104 @@ else
     echo -e "${LGREEN}OK${GREY}"
     echo
 fi
+
+# Install TOMCAT - raw install instead of repository install
+
+# Create tomcat group if it doesn't exist
+if ! getent group tomcat > /dev/null 2>&1; then
+    sudo groupadd tomcat
+fi
+
+# Create tomcat user if it doesn't exist
+if ! id -u tomcat > /dev/null 2>&1; then
+    sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
+fi
+
+wget -q --show-progress -O tomcat.tar.gz ${TOMCAT_SOURCE_LINK}/apache-tomcat-${TOMCAT_VERSION}.tar.gz
+if [[ $? -ne 0 ]]; then
+    echo -e "${LRED}Failed to download tomcat-${TOMCAT_VERSION}.tar.gz" 1>&2
+    echo -e "${TOMCAT_SOURCE_LINK}/tomcat-${TOMCAT_VERSION}.tar.gz${GREY}"
+    exit 1
+else
+    echo -e "${LGREEN}Downloaded tomcat-${TOMCAT_VERSION}.tar.gz${GREY}"
+fi
+
+sudo mkdir -p /opt/tomcat
+sudo tar xzf tomcat.tar.gz -C /opt/tomcat --strip-components=1
+
+sudo chown -R tomcat:tomcat /opt/tomcat
+sudo sh -c 'chmod +x /opt/tomcat/bin/*.sh'
+
+# Configure Tomcat Manager and Host Manager webapps
+echo -e "${GREY}Configuring Tomcat Manager and Host Manager webapps..."
+for webapp in manager host-manager; do
+    if [[ -d "/opt/tomcat/webapps/${webapp}" ]]; then
+        # Configure context.xml to allow access
+        context_file="/opt/tomcat/webapps/${webapp}/META-INF/context.xml"
+        if [[ -f "${context_file}" ]]; then
+            # Backup original context.xml
+            sudo cp "${context_file}" "${context_file}.bak"
+            # Comment out the RemoteAddrValve to allow access from any IP (not just localhost)
+            # Handle both single-line and multi-line RemoteAddrValve configurations
+            # First, try to match single-line format
+            if grep -q 'RemoteAddrValve.*/>' "${context_file}"; then
+                # Single-line format: comment out the entire line
+                sudo sed -i 's|\(<Valve className="org\.apache\.catalina\.valves\.RemoteAddrValve"[^>]*/>\)|<!-- \1 -->|g' "${context_file}"
+            else
+                # Multi-line format: comment out the range
+                sudo sed -i '/<Valve className="org\.apache\.catalina\.valves\.RemoteAddrValve"/,/>/s/^/<!-- /' "${context_file}"
+                sudo sed -i '/<!-- <Valve className="org\.apache\.catalina\.valves\.RemoteAddrValve"/,/>/s/>$/ -->/' "${context_file}"
+            fi
+            echo -e "${LGREEN}${webapp^} webapp configured${GREY}"
+        fi
+    else
+        echo -e "${LYELLOW}Warning: ${webapp^} webapp not found in Tomcat installation${GREY}"
+    fi
+done
+
+# Ensure proper ownership after configuration
+sudo chown -R tomcat:tomcat /opt/tomcat
+echo
+
+# Detect Java 21 installation path
+JAVA_21_HOME=$(update-alternatives --list java 2>/dev/null | grep -o '/usr/lib/jvm/[^/]*' | grep -i 'java-21' | head -1)
+if [[ -z "${JAVA_21_HOME}" ]]; then
+    # Fallback: try common Java 21 paths
+    if [[ -d "/usr/lib/jvm/java-21-openjdk-amd64" ]]; then
+        JAVA_21_HOME="/usr/lib/jvm/java-21-openjdk-amd64"
+    elif [[ -d "/usr/lib/jvm/java-21-openjdk" ]]; then
+        JAVA_21_HOME="/usr/lib/jvm/java-21-openjdk"
+    else
+        echo -e "${LYELLOW}Warning: Could not detect Java 21 path, using default${GREY}"
+        JAVA_21_HOME="/usr/lib/jvm/java-21-openjdk-amd64"
+    fi
+fi
+
+sudo tee /etc/systemd/system/tomcat.service > /dev/null <<EOF
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=network.target
+
+[Service]
+Type=forking
+User=tomcat
+Group=tomcat
+Environment="JAVA_HOME=${JAVA_21_HOME}"
+Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
+Environment="CATALINA_HOME=/opt/tomcat"
+Environment="CATALINA_BASE=/opt/tomcat"
+ExecStart=/opt/tomcat/bin/startup.sh
+ExecStop=/opt/tomcat/bin/shutdown.sh
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl start tomcat
+sudo systemctl enable tomcat
 
 # Install Postfix with default settings for smtp email relay
 echo -e "${GREY}Installing Postfix MTA for backup email notifications and alerts, see separate SMTP relay configuration script..."
@@ -394,7 +499,7 @@ echo -e "${GREY}Moving guacamole-${GUAC_VERSION}.war (/etc/guacamole/extensions/
 mv -f guacamole-${GUAC_VERSION}.war /etc/guacamole/guacamole.war
 chmod 664 /etc/guacamole/guacamole.war
 # Create a symbolic link for Tomcat
-ln -sf /etc/guacamole/guacamole.war /var/lib/${TOMCAT_VERSION}/webapps/ &>>${INSTALL_LOG}
+ln -sf /etc/guacamole/guacamole.war /opt/tomcat/webapps/ &>>${INSTALL_LOG}
 if [[ $? -ne 0 ]]; then
     echo -e "${LRED}Failed. See ${INSTALL_LOG}${GREY}" 1>&2
     exit 1
@@ -541,7 +646,7 @@ fi
 
 # Configure Tomcat admin access for guacadmin user
 echo -e "${GREY}Configuring Tomcat admin access for guacadmin user..."
-TOMCAT_USERS_XML="/etc/${TOMCAT_VERSION}/tomcat-users.xml"
+TOMCAT_USERS_XML="/opt/tomcat/conf/tomcat-users.xml"
 if [[ -f "${TOMCAT_USERS_XML}" ]]; then
     # Backup the original file
     cp "${TOMCAT_USERS_XML}" "${TOMCAT_USERS_XML}.bak" &>>${INSTALL_LOG}
@@ -591,7 +696,7 @@ fi
 
 # Restart Tomcat
 echo -e "${GREY}Restarting Tomcat service & enable at boot..."
-systemctl restart ${TOMCAT_VERSION}
+systemctl restart tomcat
 if [[ $? -ne 0 ]]; then
     echo -e "${LRED}Failed. See ${INSTALL_LOG}${GREY}" 1>&2
     exit 1
@@ -601,7 +706,7 @@ else
 fi
 
 # Set Tomcat to start at boot
-systemctl enable ${TOMCAT_VERSION}
+systemctl enable tomcat
 
 # Begin the MySQL database config only if this is a local MYSQL install.
 if [[ "${INSTALL_MYSQL}" = true ]]; then
@@ -785,11 +890,11 @@ fi
 # Redirect the Tomcat URL to its root to avoid typing the extra /guacamole path (if not using a reverse proxy)
 if [[ "${GUAC_URL_REDIR}" = true ]] && [[ "${INSTALL_NGINX}" = false ]]; then
     echo -e "${GREY}Redirecting the Tomcat http root url to /guacamole...${DGREY}"
-    systemctl stop ${TOMCAT_VERSION}
-    mv /var/lib/${TOMCAT_VERSION}/webapps/ROOT/index.html /var/lib/${TOMCAT_VERSION}/webapps/ROOT/index.html.old
-    touch /var/lib/${TOMCAT_VERSION}/webapps/ROOT/index.jsp
-    echo "<% response.sendRedirect(\"/guacamole\");%>" >>/var/lib/${TOMCAT_VERSION}/webapps/ROOT/index.jsp
-    systemctl start ${TOMCAT_VERSION}
+    systemctl stop tomcat
+    mv /opt/tomcat/webapps/ROOT/index.html /opt/tomcat/webapps/ROOT/index.html.old
+    touch /opt/tomcat/webapps/ROOT/index.jsp
+    echo "<% response.sendRedirect(\"/guacamole\");%>" >>/opt/tomcat/webapps/ROOT/index.jsp
+    systemctl start tomcat
     if [[ $? -ne 0 ]]; then
         echo -e "${LRED}Failed. See ${INSTALL_LOG}${GREY}" 1>&2
         exit 1
