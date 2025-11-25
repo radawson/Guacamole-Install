@@ -1,7 +1,7 @@
 {
        "guacamoleVersion": "*",
-       "name": "Custom Blackhorse Theme",
-       "namespace": "info.blackhorse.custom-theme",
+       "name": "Technical Operations Group Theme",
+       "namespace": "info.tog.custom-theme",
        "smallIcon": "images/logo-64.png",
        "largeIcon": "images/logo-144.png",
        "translations": [

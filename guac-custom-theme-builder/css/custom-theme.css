@@ -1,250 +1,725 @@
-/* Colour codes used */
-/*    Guacamole grassy green: #88bf5b */
-/*    Warning red #ff2233 */
-/*    Main background charcoal #3f3f3f */
-/*    Input fields dark charcoal #2b2b2b */
-/*    Login dialog background black #000000 */
-/*    All text: #ececec */
+/* ============================================================================
+   Technical Operations Group - Guacamole Custom Theme
+   Based on Parsons Corporation Color Palette
+   ============================================================================ */
 
+/* Color Palette - Based on Parsons Website */
+/* Primary Green: #169309 (rgb(22, 147, 9)) - Links and accents */
+/* Background: #ffffff (white) */
+/* Text: #000000 (black) / #333333 (dark gray) */
+/* Secondary backgrounds: #f5f5f5 (light gray) */
+/* Borders: #e0e0e0 (light gray) */
+/* Error/Warning: #cf2e2e (red) */
+/* Success: #169309 (green) */
 
-/* General Style */
+/* ============================================================================
+   CSS Variables for easy customization
+   ============================================================================ */
+:root {
+    --parsons-green: #169309;
+    --parsons-green-hover: #1aad0b;
+    --parsons-green-light: #4db83a;
+    --parsons-green-dark: #0f6d05;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e8e8e8;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --text-muted: #666666;
+    --border-color: #e0e0e0;
+    --border-hover: #169309;
+    --error-color: #cf2e2e;
+    --warning-color: #ff6900;
+    --success-color: #169309;
+    --shadow: rgba(0, 0, 0, 0.1);
+    --shadow-hover: rgba(22, 147, 9, 0.2);
+}
+
+/* ============================================================================
+   General Styles
+   ============================================================================ */
 body {
-    color: #ececec;
-    background-color: #3f3f3f;
-}
-pre {
-    color: #ececec;
-    background-color: #2b2b2b;
-    border: 1px solid #000000;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Icons */
-.fa {
-    color: #ececec;
+pre {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 1em;
+    border-radius: 4px;
+}
+
+/* ============================================================================
+   Links
+   ============================================================================ */
+a[href] {
+    color: var(--parsons-green);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a[href]:hover {
+    color: var(--parsons-green-hover);
+    text-decoration: underline;
 }
 
 a[href]:visited {
-    color: #88bf5b;
-}
-a[href] {
-    color: #88bf5b;
+    color: var(--parsons-green-dark);
 }
 
+a[href]:active {
+    color: var(--parsons-green-dark);
+}
+
+/* ============================================================================
+   Icons
+   ============================================================================ */
+.fa {
+    color: var(--text-secondary);
+}
+
+.fa:hover {
+    color: var(--parsons-green);
+}
+
+/* ============================================================================
+   Form Elements
+   ============================================================================ */
 div.location,
 input[type=text],
 input[type=email],
 input[type=number],
 input[type=password],
-textarea {
-    background-color: #2b2b2b;
-    color: #ececec;
+input[type=search],
+textarea,
+select {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.5em;
+    border-radius: 4px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-
-/* Login */
-div.login-ui {
-    color: #ececec;
-    background-color: #3f3f3f;
-}
-.login-ui .login-fields .labeled-field input:focus {
-    background-color: #3f3f3f;
-    color: #ececec;
-}
-
-.login-ui .login-fields .labeled-field {
-    background-color: #3f3f3f;
-    color: #ececec;
+input[type=text]:focus,
+input[type=email]:focus,
+input[type=number]:focus,
+input[type=password]:focus,
+input[type=search]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--parsons-green);
+    box-shadow: 0 0 0 3px var(--shadow-hover);
 }
 
-.login-ui .login-dialog .logo {
-    background-image: url('app/ext/custom-namespace/images/logo.png');
-    width: 7em;
-    height:	7em;
-    -webkit-background-size: 7em auto;
-
+input[type=text]:disabled,
+input[type=email]:disabled,
+input[type=number]:disabled,
+input[type=password]:disabled,
+textarea:disabled,
+select:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: not-allowed;
 }
 
-.login-ui .login-dialog {
-    background-color: #000000;
-    color: #ececec;
+/* ============================================================================
+   Buttons
+   ============================================================================ */
+button,
+input[type=button],
+input[type=submit] {
+    background-color: var(--parsons-green);
+    color: var(--bg-primary);
+    border: 1px solid var(--parsons-green);
+    padding: 0.5em 1em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
 }
 
-.login-ui .login-dialog .version .app-name {
-    font-weight: 300;
-    text-transform: none;
-    text-align: center;
-    font-size: 2.0em;
-    color: #ececec;
-    font-family: arial black, sans-serif;
+button:hover,
+input[type=button]:hover,
+input[type=submit]:hover {
+    background-color: var(--parsons-green-hover);
+    border-color: var(--parsons-green-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow);
 }
 
-div.logged-out-modal .ng-scope {
-    color: #ececec;
-    background-color: #000000;
+button:active,
+input[type=button]:active,
+input[type=submit]:active {
+    transform: translateY(0);
+    box-shadow: none;
 }
 
-div.logged-out-modal .ng-scope button {
-    color: #ececec;
-    background-color: #3f3f3f;
-    border: 1px solid #ececec;
-}
-
-div.modal-contents {
-    color: #ececec;
-    background-color: #3f3f3f;
-}
-
-.logged-out-modal guac-modal {
-    color: #ececec;
-    background-color: #3f3f3f;
-}
-
-div.notification.ng.scope {
-    border: 1px solid #ececec;
-}
-
-.notification.error {
-    background-color: #ff2233;
-}
-
-.client-status-modal .notification.error {
-    background-color: #ff2233;
+button:disabled,
+input[type=button]:disabled,
+input[type=submit]:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+    cursor: not-allowed;
+    transform: none;
 }
 
 button.danger {
-    background: #ff2233;
- }
+    background-color: var(--error-color);
+    border-color: var(--error-color);
+    color: var(--bg-primary);
+}
+
+button.danger:hover {
+    background-color: #b82626;
+    border-color: #b82626;
+}
+
+button.secondary {
+    background-color: transparent;
+    color: var(--parsons-green);
+    border-color: var(--parsons-green);
+}
+
+button.secondary:hover {
+    background-color: var(--parsons-green);
+    color: var(--bg-primary);
+}
+
+/* ============================================================================
+   Login Screen
+   ============================================================================ */
+div.login-ui {
+    color: var(--text-primary);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    min-height: 100vh;
+}
+
+.login-ui .login-fields .labeled-field {
+    background-color: transparent;
+    color: var(--text-primary);
+}
+
+.login-ui .login-fields .labeled-field input {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.login-ui .login-fields .labeled-field input:focus {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--parsons-green);
+    box-shadow: 0 0 0 3px var(--shadow-hover);
+}
+
+.login-ui .login-dialog {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
+    padding: 2em;
+    max-width: 400px;
+}
+
+.login-ui .login-dialog .logo {
+    background-image: url('app/ext/info/tog/custom-theme/images/logo.png');
+    width: 7em;
+    height: 7em;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin: 0 auto 1em;
+}
+
+.login-ui .login-dialog .version .app-name {
+    font-weight: 600;
+    text-transform: none;
+    text-align: center;
+    font-size: 2.0em;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0.5em 0;
+}
 
 .login-ui.error p.login-error {
-    color: #ececec;
-    background-color: #ff2233;
+    color: var(--bg-primary);
+    background-color: var(--error-color);
+    padding: 0.75em 1em;
+    border-radius: 4px;
+    margin: 1em 0;
 }
 
-
-/* Home */
-.recent-connections .connection:hover {
-    background-color: #88bf5b;
+div.logged-out-modal .ng-scope {
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
 }
 
-.menu-dropdown .menu-contents {
-    background-color: #2b2b2b;
-}
-.menu-dropdown .menu-contents li a {
-    color: #ececec;
-}
-.menu-dropdown .menu-contents li a:hover {
-    background-color: #88bf5b;
+div.logged-out-modal .ng-scope button {
+    color: var(--bg-primary);
+    background-color: var(--parsons-green);
+    border: 1px solid var(--parsons-green);
+    border-radius: 4px;
 }
 
-.list-item.selected {
-    background: #88bf5b
-}
-.list-item:not(.selected) .caption:hover {
-    background-color: #88bf5b;
-}
-.list-item .name {
-    color: #ececec;
+div.logged-out-modal .ng-scope button:hover {
+    background-color: var(--parsons-green-hover);
 }
 
-.settings.connections .connection-list .new-sharing-profile {
-    opacity: .6;
+/* ============================================================================
+   Modals and Dialogs
+   ============================================================================ */
+div.modal-contents {
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
+}
+
+.logged-out-modal guac-modal {
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+}
+
+/* ============================================================================
+   Notifications
+   ============================================================================ */
+div.notification.ng.scope {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.75em 1em;
+    margin: 0.5em 0;
 }
 
 .notification {
-    color: #ececec;
-    background-color: #2b2b2b;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border-left: 4px solid var(--parsons-green);
 }
 
+.notification.error {
+    background-color: #fee;
+    border-left-color: var(--error-color);
+    color: var(--error-color);
+}
 
-/* Menus */
+.notification.warning {
+    background-color: #fff4e6;
+    border-left-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+.notification.success {
+    background-color: #e8f5e9;
+    border-left-color: var(--success-color);
+    color: var(--success-color);
+}
+
+.client-status-modal .notification.error {
+    background-color: #fee;
+    border-left-color: var(--error-color);
+}
+
+/* ============================================================================
+   Home Screen / Connection List
+   ============================================================================ */
+.recent-connections .connection {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1em;
+    margin: 0.5em 0;
+    transition: all 0.2s ease;
+}
+
+.recent-connections .connection:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--parsons-green);
+    box-shadow: 0 2px 8px var(--shadow-hover);
+    transform: translateY(-2px);
+}
+
+.list-item {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin: 0.25em 0;
+    transition: all 0.2s ease;
+}
+
+.list-item.selected {
+    background: var(--parsons-green);
+    color: var(--bg-primary);
+    border-color: var(--parsons-green);
+}
+
+.list-item.selected .name,
+.list-item.selected .caption {
+    color: var(--bg-primary);
+}
+
+.list-item:not(.selected) .caption:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--parsons-green);
+}
+
+.list-item .name {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.list-item .caption {
+    color: var(--text-secondary);
+}
+
+/* ============================================================================
+   Menus and Dropdowns
+   ============================================================================ */
 .menu {
-    color: #ececec;
-    background-color: #3f3f3f;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--shadow);
+}
+
+.menu-dropdown .menu-contents {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--shadow);
+    padding: 0.5em 0;
+}
+
+.menu-dropdown .menu-contents li {
+    list-style: none;
+}
+
+.menu-dropdown .menu-contents li a {
+    color: var(--text-primary);
+    padding: 0.5em 1em;
+    display: block;
+    transition: background-color 0.2s ease;
+}
+
+.menu-dropdown .menu-contents li a:hover {
+    background-color: var(--bg-secondary);
+    color: var(--parsons-green);
+}
+
+.menu-dropdown .menu-contents li a.danger {
+    color: var(--bg-primary);
+    font-weight: 600;
+    background-color: var(--error-color);
+}
+
+.menu-dropdown .menu-contents li a.danger:hover {
+    background-color: #b82626;
 }
 
 .clipboard,
 .clipboard-service-target {
-    background-color: #2b2b2b;
-    color: #88bf5b;
+    background-color: var(--bg-secondary);
+    color: var(--parsons-green);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.5em;
 }
 
-.menu-dropdown .menu-contents li a.danger {
-    color: #ececec;
-    font-weight: 700;
-    background-color: #ff2233;
-}
-
-/* Connections */
+/* ============================================================================
+   Connections
+   ============================================================================ */
 #connection-warning {
-    background-color: #3f3f3f;
+    background-color: #fff4e6;
+    border: 1px solid var(--warning-color);
+    border-radius: 4px;
+    padding: 1em;
+    margin: 1em 0;
+    color: var(--warning-color);
 }
 
 .transfer-manager {
-    background-color: #2b2b2b;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1em;
 }
+
+.transfer {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.75em;
+    margin: 0.5em 0;
+}
+
 .transfer.error {
-    background-color: #ff2233;
+    background-color: #fee;
+    border-color: var(--error-color);
+    color: var(--error-color);
 }
 
+.transfer.success {
+    background-color: #e8f5e9;
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
 
-/* Settings */
+/* ============================================================================
+   Settings Pages
+   ============================================================================ */
 .page-tabs .page-list li a[href],
 .section-tabs li a {
-    color: #ececec;
+    color: var(--text-secondary);
+    padding: 0.5em 1em;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
 }
+
 .page-tabs .page-list li a[href]:hover,
 .section-tabs li a:hover {
-    background-color: #88bf5b;
+    color: var(--parsons-green);
+    border-bottom-color: var(--parsons-green);
+    background-color: var(--bg-secondary);
 }
+
+.page-tabs .page-list li a[href].active,
+.section-tabs li a.active {
+    color: var(--parsons-green);
+    border-bottom-color: var(--parsons-green);
+    font-weight: 600;
+}
+
 .page-tabs .page-list li a[href]:visited {
-    color: #ececec;
+    color: var(--text-secondary);
+}
+
+.settings table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.settings table th {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 0.75em;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.settings table td {
+    padding: 0.75em;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings table.session-list tr.session {
+    transition: background-color 0.2s ease;
 }
 
 .settings table.session-list tr.session:hover {
-    background-color: #88bf5b;
+    background-color: var(--bg-secondary);
 }
 
 .location-chooser .dropdown {
-    background-color: #2b2b2b;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--shadow);
 }
 
 .settings.connectionHistory a.history-session-recording {
-    color: #88bf5b;
+    color: var(--parsons-green);
+    text-decoration: none;
+}
+
+.settings.connectionHistory a.history-session-recording:hover {
+    color: var(--parsons-green-hover);
+    text-decoration: underline;
 }
 
 .settings.connectionHistory a.history-session-recording:after {
-    opacity: .0;
+    opacity: 0;
 }
 
+.settings.connections .connection-list .new-sharing-profile {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.settings.connections .connection-list .new-sharing-profile:hover {
+    opacity: 1;
+}
+
+/* ============================================================================
+   User and Connection Management
+   ============================================================================ */
 .user a,
 .user-group a,
 .connection a,
 .connection-group a {
-    color: #ececec;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
 }
+
 .user a:hover,
 .user-group a:hover,
 .connection a:hover,
 .connection-group a:hover {
-    color: #ececec;
+    color: var(--parsons-green);
+    text-decoration: underline;
 }
+
 .user a:visited,
 .user-group a:visited,
 .connection a:visited,
 .connection-group a:visited {
-    color: #ececec;
+    color: var(--text-primary);
 }
 
 .manage-user .notice.read-only {
-    color: #ececec;
-    background-color: #2b2b2b;
+    color: var(--text-muted);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.75em 1em;
+    margin: 0.5em 0;
+}
+
+/* ============================================================================
+   File System Menu
+   ============================================================================ */
+#filesystem-menu {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--shadow);
+}
+
+#filesystem-menu .header.breadcrumbs .breadcrumb {
+    color: var(--text-secondary);
+    padding: 0.5em;
+    transition: all 0.2s ease;
 }
 
 #filesystem-menu .header.breadcrumbs .breadcrumb:hover {
-    background-color: #88bf5b;
+    background-color: var(--bg-secondary);
+    color: var(--parsons-green);
+}
+
+/* ============================================================================
+   Guacamole Menu (Zoom, etc.)
+   ============================================================================ */
+#guac-menu {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--shadow);
+}
+
+#guac-menu #zoom-out,
+#guac-menu #zoom-in {
+    color: var(--text-secondary);
+    padding: 0.5em;
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
 
 #guac-menu #zoom-out:hover,
 #guac-menu #zoom-in:hover {
-    background-color: #88bf5b;
+    background-color: var(--bg-secondary);
+    color: var(--parsons-green);
+}
+
+/* ============================================================================
+   Scrollbars (Webkit browsers)
+   ============================================================================ */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--parsons-green);
+}
+
+/* ============================================================================
+   Selection
+   ============================================================================ */
+::selection {
+    background-color: var(--parsons-green);
+    color: var(--bg-primary);
+}
+
+::-moz-selection {
+    background-color: var(--parsons-green);
+    color: var(--bg-primary);
+}
+
+/* ============================================================================
+   Loading States
+   ============================================================================ */
+.loading,
+.spinner {
+    border: 3px solid var(--bg-tertiary);
+    border-top-color: var(--parsons-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   Responsive Design
+   ============================================================================ */
+@media (max-width: 768px) {
+    .login-ui .login-dialog {
+        max-width: 90%;
+        padding: 1.5em;
+    }
+    
+    .login-ui .login-dialog .logo {
+        width: 5em;
+        height: 5em;
+    }
+    
+    .login-ui .login-dialog .version .app-name {
+        font-size: 1.5em;
+    }
+}
+
+/* ============================================================================
+   Print Styles
+   ============================================================================ */
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+    
+    .menu,
+    .menu-dropdown,
+    #guac-menu {
+        display: none;
+    }
 }

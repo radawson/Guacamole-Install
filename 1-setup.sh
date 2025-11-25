@@ -122,6 +122,7 @@ DB_TZ=$(timedatectl show -p Timezone --value) # Blank "" defaults to UTC, for lo
 INSTALL_TOTP=""                 # Add TOTP MFA extension (true/false), can't be installed simultaneously with DUO)
 INSTALL_DUO=""                  # Add DUO MFA extension (true/false, can't be installed simultaneously with TOTP)
 INSTALL_LDAP=""                 # Add Active Directory extension (true/false)
+INSTALL_SSO=""                  # Add OpenID Connect (SSO) extension (true/false)
 INSTALL_QCONNECT=""             # Add Guacamole console quick connect feature (true/false)
 INSTALL_HISTREC=""              # Add Guacamole history recording storage feature (true/false)
 HISTREC_PATH=""                 # If blank "" sets the Apache's default path of /var/lib/guacamole/recordings
@@ -169,6 +170,7 @@ wget -q --show-progress ${GITHUB}/4b-install-tls-letsencrypt-nginx.sh -O 4b-inst
 # Download the suite of optional feature adding scripts
 wget -q --show-progress ${GITHUB}/guac-optional-features/add-auth-duo.sh -O add-auth-duo.sh
 wget -q --show-progress ${GITHUB}/guac-optional-features/add-auth-ldap.sh -O add-auth-ldap.sh
+wget -q --show-progress ${GITHUB}/guac-optional-features/add-auth-sso.sh -O add-auth-sso.sh
 wget -q --show-progress ${GITHUB}/guac-optional-features/add-auth-totp.sh -O add-auth-totp.sh
 wget -q --show-progress ${GITHUB}/guac-optional-features/add-xtra-quickconnect.sh -O add-xtra-quickconnect.sh
 wget -q --show-progress ${GITHUB}/guac-optional-features/add-xtra-histrecstor.sh -O add-xtra-histrecstor.sh
@@ -178,8 +180,28 @@ wget -q --show-progress ${GITHUB}/guac-optional-features/add-fail2ban.sh -O add-
 wget -q --show-progress ${GITHUB}/guac-management/backup-guacamole.sh -O backup-guacamole.sh
 wget -q --show-progress ${GITHUB}/upgrade-guacamole.sh -O upgrade-guacamole.sh
 
-# Download the dark theme & branding template
-wget -q --show-progress ${GITHUB}/branding.jar -O branding.jar
+# Download the dark theme & branding template (or use local custom theme if available)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd $DOWNLOAD_DIR
+if [[ -f "${SCRIPT_DIR}/guac-custom-theme-builder/branding.jar" ]]; then
+    echo -e "${GREY}Using local custom branding.jar from guac-custom-theme-builder...${GREY}"
+    cp "${SCRIPT_DIR}/guac-custom-theme-builder/branding.jar" branding.jar
+elif [[ -d "${SCRIPT_DIR}/guac-custom-theme-builder" ]]; then
+    echo -e "${GREY}Building custom branding.jar from guac-custom-theme-builder...${GREY}"
+    cd "${SCRIPT_DIR}/guac-custom-theme-builder"
+    if command -v jar &> /dev/null; then
+        jar cfmv branding.jar META-INF/MANIFEST.MF guac-manifest.json css images translations META-INF
+        cp branding.jar "${DOWNLOAD_DIR}/branding.jar"
+        echo -e "${LGREEN}Custom branding.jar built successfully${GREY}"
+    else
+        echo -e "${LYELLOW}Java JDK not found. Downloading default branding.jar instead.${GREY}"
+        cd "${DOWNLOAD_DIR}"
+        wget -q --show-progress ${GITHUB}/branding.jar -O branding.jar
+    fi
+    cd "${DOWNLOAD_DIR}"
+else
+    wget -q --show-progress ${GITHUB}/branding.jar -O branding.jar
+fi
 chmod +x *.sh
 
 # Pause here to optionally customise downloaded scripts before any actual install actions begin
@@ -523,6 +545,17 @@ if [[ -z "${INSTALL_LDAP}" ]]; then
     fi
 fi
 
+# Prompt to install OpenID Connect (SSO)
+if [[ -z "${INSTALL_SSO}" ]]; then
+    echo -e -n "${GREY}AUTH: Install OpenID Connect (SSO)? [y/n] [default n]: "
+    read PROMPT
+    if [[ ${PROMPT} =~ ^[Yy]$ ]]; then
+        INSTALL_SSO=true
+    else
+        INSTALL_SSO=false
+    fi
+fi
+
 echo
 # Prompt to install the Quick Connect feature (some higher security use cases may not want this)
 echo -e "${LGREEN}Guacamole console optional extras:${GREY}"
@@ -768,6 +801,7 @@ export DB_TZ="${DB_TZ}"
 export INSTALL_TOTP=$INSTALL_TOTP
 export INSTALL_DUO=$INSTALL_DUO
 export INSTALL_LDAP=$INSTALL_LDAP
+export INSTALL_SSO=$INSTALL_SSO
 export INSTALL_QCONNECT=$INSTALL_QCONNECT
 export INSTALL_HISTREC=$INSTALL_HISTREC
 export HISTREC_PATH="${HISTREC_PATH}"
@@ -837,6 +871,18 @@ if [[ "${INSTALL_NGINX}" = true ]] && [[ "${LETS_ENCRYPT}" = true ]] && [[ "${SE
     echo -e "${LGREEN}Let's Encrypt TLS configured for Nginx \n${LYELLOW}https:${LGREEN}//${LE_DNS_NAME}  - login user/pass: guacadmin/guacadmin\n${LYELLOW}***Be sure to change the password***${GREY}"
 fi
 
+# Install OpenID Connect (SSO) extension if option is selected (with all exported variables from this current shell)
+if [[ "${INSTALL_SSO}" = true ]]; then
+    cd $DOWNLOAD_DIR
+    sudo -E ./add-auth-sso.sh
+    if [[ $? -ne 0 ]]; then
+        echo -e "${LRED}add-auth-sso.sh FAILED. See ${INSTALL_LOG}${GREY}" 1>&2
+        exit 1
+    else
+        echo -e "${LGREEN}OpenID Connect (SSO) extension installed${GREY}"
+    fi
+fi
+
 # Duo Settings reminder - If Duo is selected you can't login to Guacamole until this extension is fully configured
 if [[ $INSTALL_DUO == "true" ]]; then
     echo
@@ -849,6 +895,13 @@ if [[ $INSTALL_LDAP == "true" ]]; then
     echo
     echo -e "${LYELLOW}Reminder: LDAP requires that your LDAP directory configuration match the exact format\nadded to the /etc/guacamole/guacamole.properties file before LDAP auth will be active."
     echo -e "See https://guacamole.apache.org/doc/gug/ldap-auth.html"
+fi
+
+# OpenID Connect (SSO) Settings reminder, SSO auth is not functional until the config is complete
+if [[ $INSTALL_SSO == "true" ]]; then
+    echo
+    echo -e "${LYELLOW}Reminder: OpenID Connect (SSO) requires that your OpenID Connect provider configuration match the exact format\nadded to the /etc/guacamole/guacamole.properties file before SSO auth will be active."
+    echo -e "See https://guacamole.apache.org/doc/gug/openid-auth.html"
 fi
 
 # Tidy up
