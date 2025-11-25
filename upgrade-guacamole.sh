@@ -79,6 +79,7 @@ RDP_SHARE_HOST=
 RDP_SHARE_LABEL=
 RDP_PRINTER_LABEL=
 GUACD_ACCOUNT=
+DB_CMD=
 
 # Standardise on a distro version identification lexicon
 source /etc/os-release
@@ -151,7 +152,7 @@ echo -e "${LGREEN}Upgraded Guacamole SQL jdbc to version ${NEW_GUAC_VERSION}${GR
 wget -q --show-progress -O mysql-connector-j-${NEW_MYSQLJCON}.tar.gz https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-j-${NEW_MYSQLJCON}.tar.gz
 if [[ $? -ne 0 ]]; then
     echo -e "${LRED}Failed to download mysql-connector-j-${NEW_MYSQLJCON}.tar.gz" 1>&2
-    echo -e "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-j-${NEW_MYSQLJCON}}.tar.gz${GREY}"
+    echo -e "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-j-${NEW_MYSQLJCON}.tar.gz${GREY}"
     exit 1
 else
     tar -xzf mysql-connector-j-${NEW_MYSQLJCON}.tar.gz
@@ -222,25 +223,60 @@ cd ..
 
 # Don't run the SQL upgrade commands if original setup option was set to remote MySQL instance. - Use separate DB update script.
 if [[ "${INSTALL_MYSQL}" = true ]]; then
+    # Validate required MySQL variables
+    if [[ -z "${MYSQL_HOST}" ]]; then
+        MYSQL_HOST="localhost"
+    fi
+    if [[ -z "${MYSQL_PORT}" ]]; then
+        MYSQL_PORT="3306"
+    fi
+    if [[ -z "${GUAC_DB}" ]]; then
+        GUAC_DB="guacamole_db"
+    fi
+    
+    # Determine the correct database command (mysql or mariadb)
+    if [[ -z "${DB_CMD}" ]]; then
+        if command -v mariadb &> /dev/null; then
+            DB_CMD="mariadb"
+        else
+            DB_CMD="mysql"
+        fi
+    fi
+    
+    # Set MySQL password as environment variable (secure method, avoids password in process list)
+    if [[ -z "${MYSQL_ROOT_PWD}" ]]; then
+        echo -e "${LRED}Error: MYSQL_ROOT_PWD is not set. Cannot proceed with SQL upgrade.${GREY}" 1>&2
+        echo -e "${LYELLOW}Please set MYSQL_ROOT_PWD in the upgrade script or export it before running.${GREY}" 1>&2
+        exit 1
+    fi
+    export MYSQL_PWD="${MYSQL_ROOT_PWD}"
+    
     # Get list of SQL Upgrade Files
     echo -e "${GREY}Upgrading MySQL Schema..."
     UPGRADEFILES=($(ls -1 guacamole-auth-jdbc-${NEW_GUAC_VERSION}/mysql/schema/upgrade/ | sort -V))
 
-    # Compare SQL Upgrage Files against old version, apply upgrades as needed
+    # Compare SQL Upgrade Files against old version, apply upgrades as needed
+    SQL_ERROR=0
     for FILE in ${UPGRADEFILES[@]}; do
         FILEVERSION=$(echo ${FILE} | grep -oP 'upgrade-pre-\K[0-9\.]+(?=\.)')
         if [[ $(echo -e "${FILEVERSION}\n${OLD_GUAC_VERSION}" | sort -V | head -n1) == ${OLD_GUAC_VERSION} && ${FILEVERSION} != ${OLD_GUAC_VERSION} ]]; then
             echo "Patching ${GUAC_DB} with ${FILE}"
-
-    		if [[ ! -z "$MYSQL_ROOT_PWD" ]]; then
-                	mysql -u root -p${MYSQL_ROOT_PWD} -D ${GUAC_DB} -h ${MYSQL_HOST} -P ${MYSQL_PORT} <guacamole-auth-jdbc-${NEW_GUAC_VERSION}/mysql/schema/upgrade/${FILE} &>>${INSTALL_LOG}
-            	else
-			mysql -u root -D ${GUAC_DB} -h ${MYSQL_HOST} -P ${MYSQL_PORT} <guacamole-auth-jdbc-${NEW_GUAC_VERSION}/mysql/schema/upgrade/${FILE} &>>${INSTALL_LOG}
-	    	fi
+            
+            # Use DB_CMD with MYSQL_PWD environment variable (no -p flag needed)
+            ${DB_CMD} -u root -D ${GUAC_DB} -h ${MYSQL_HOST} -P ${MYSQL_PORT} <guacamole-auth-jdbc-${NEW_GUAC_VERSION}/mysql/schema/upgrade/${FILE} &>>${INSTALL_LOG}
+            if [[ $? -ne 0 ]]; then
+                echo -e "${LRED}Failed to apply ${FILE}${GREY}" 1>&2
+                SQL_ERROR=1
+            fi
         fi
     done
-    if [[ $? -ne 0 ]]; then
+    
+    # Unset MYSQL_PWD for security
+    unset MYSQL_PWD
+    
+    if [[ ${SQL_ERROR} -ne 0 ]]; then
         echo -e "${LRED}SQL upgrade failed. See ${INSTALL_LOG}${GREY}" 1>&2
+        echo -e "${LYELLOW}Tip: Make sure MYSQL_ROOT_PWD is set correctly in the upgrade script${GREY}" 1>&2
         exit 1
     else
         echo -e "${LGREEN}OK${GREY}"
