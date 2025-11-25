@@ -4,7 +4,7 @@
    ============================================================================ */
 
 /* Color Palette - Based on Parsons Website */
-/* Primary Green: #169309 (rgb(22, 147, 9)) - Links and accents */
+/* Primary Blue: #169309 (rgb(22, 147, 9)) - Links and accents */
 /* Background: #ffffff (white) */
 /* Text: #000000 (black) / #333333 (dark gray) */
 /* Secondary backgrounds: #f5f5f5 (light gray) */
@@ -229,7 +229,14 @@ div.login-ui {
 }
 
 .login-ui .login-dialog .logo {
-    background-image: url('app/ext/info/tog/custom-theme/images/logo.png');
+    /* Guacamole extension resources: app/ext/NAMESPACE/PATH where namespace dots become slashes */
+    /* Try absolute path first (works if Guacamole is at /guacamole/) */
+    /* background-image: url('/guacamole/app/ext/info/tog/custom-theme/images/logo.png'); */
+    /* If above doesn't work, try relative path (uncomment below and comment above): */
+    /* background-image: url('app/ext/info/tog/custom-theme/images/logo.png'); */
+    /* Or if Guacamole is at root, try: */
+    /* background-image: url('/app/ext/info/tog/custom-theme/images/logo.png'); */
+    background-image: url('../images/logo.png');
     width: 7em;
     height: 7em;
     background-size: contain;
