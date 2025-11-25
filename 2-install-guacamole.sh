@@ -187,6 +187,28 @@ done
 
 # Ensure proper ownership after configuration
 sudo chown -R tomcat:tomcat /opt/tomcat
+
+# Create symbolic link from /etc/tomcat to /opt/tomcat/conf for easier configuration access
+echo -e "${GREY}Creating symbolic link /etc/tomcat -> /opt/tomcat/conf..."
+if [[ -e "/etc/tomcat" ]] && [[ ! -L "/etc/tomcat" ]]; then
+    # If /etc/tomcat exists and is not a symlink, backup it
+    echo -e "${LYELLOW}Warning: /etc/tomcat exists and is not a symlink, backing up to /etc/tomcat.backup${GREY}"
+    sudo mv /etc/tomcat /etc/tomcat.backup
+fi
+# Remove existing symlink if it exists and points to wrong location
+if [[ -L "/etc/tomcat" ]]; then
+    current_target=$(readlink /etc/tomcat)
+    if [[ "${current_target}" != "/opt/tomcat/conf" ]]; then
+        sudo rm /etc/tomcat
+    fi
+fi
+# Create the symlink if it doesn't exist or points to wrong location
+if [[ ! -L "/etc/tomcat" ]]; then
+    sudo ln -sf /opt/tomcat/conf /etc/tomcat
+    echo -e "${LGREEN}Symbolic link created${GREY}"
+else
+    echo -e "${LGREEN}Symbolic link already exists${GREY}"
+fi
 echo
 
 # Detect Java 21 installation path
