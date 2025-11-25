@@ -25,9 +25,52 @@ if ! [[ $(id -u) = 0 ]]; then
     exit 1
 fi
 
-TOMCAT_VERSION=$(ls /etc/ | grep tomcat)
-GUAC_VERSION=$(grep -oP 'Guacamole.API_VERSION = "\K[0-9\.]+' /var/lib/${TOMCAT_VERSION}/webapps/guacamole/guacamole-common-js/modules/Version.js)
-GUAC_SOURCE_LINK="http://apache.org/dyn/closer.cgi?action=download&filename=guacamole/${GUAC_VERSION}"
+# Debug
+echo "Debugging environment variables..."
+echo "GUAC_VERSION: ${GUAC_VERSION}"
+echo "GUAC_SOURCE_LINK: ${GUAC_SOURCE_LINK}"
+echo "TOMCAT_VERSION: ${TOMCAT_VERSION}"
+echo "TOMCAT_CONF_DIR: ${TOMCAT_CONF_DIR}"
+echo "TOMCAT_USERS_XML: ${TOMCAT_USERS_XML}"
+echo "TOMCAT_WEBAPPS_DIR: ${TOMCAT_WEBAPPS_DIR}"
+echo "TOMCAT_WEBAPPS_DIR: ${TOMCAT_WEBAPPS_DIR}"
+
+
+# Use exported variables if available, otherwise detect from installation
+if [[ -z "${GUAC_VERSION}" ]] || [[ -z "${GUAC_SOURCE_LINK}" ]]; then
+    # Try to detect TOMCAT_VERSION from /etc/tomcat symlink or /opt/tomcat* directories
+    if [[ -L "/etc/tomcat" ]]; then
+        TOMCAT_CONF_DIR=$(readlink -f /etc/tomcat)
+        TOMCAT_VERSION=$(basename $(dirname ${TOMCAT_CONF_DIR}))
+    elif [[ -d "/opt/tomcat9" ]]; then
+        TOMCAT_VERSION="tomcat9"
+    elif [[ -d "/opt/tomcat10" ]]; then
+        TOMCAT_VERSION="tomcat10"
+    else
+        TOMCAT_VERSION=$(ls /etc/ | grep tomcat | head -1)
+    fi
+    
+    # Try to detect GUAC_VERSION from installed webapp
+    if [[ -n "${TOMCAT_VERSION}" ]]; then
+        # Check both possible webapp locations
+        if [[ -f "/opt/${TOMCAT_VERSION}/webapps/guacamole/guacamole-common-js/modules/Version.js" ]]; then
+            GUAC_VERSION=$(grep -oP 'Guacamole.API_VERSION = "\K[0-9\.]+' /opt/${TOMCAT_VERSION}/webapps/guacamole/guacamole-common-js/modules/Version.js)
+        elif [[ -f "/var/lib/${TOMCAT_VERSION}/webapps/guacamole/guacamole-common-js/modules/Version.js" ]]; then
+            GUAC_VERSION=$(grep -oP 'Guacamole.API_VERSION = "\K[0-9\.]+' /var/lib/${TOMCAT_VERSION}/webapps/guacamole/guacamole-common-js/modules/Version.js)
+        fi
+    fi
+    
+    # Set GUAC_SOURCE_LINK if not already set
+    if [[ -z "${GUAC_SOURCE_LINK}" ]] && [[ -n "${GUAC_VERSION}" ]]; then
+        GUAC_SOURCE_LINK="http://apache.org/dyn/closer.cgi?action=download&filename=guacamole/${GUAC_VERSION}"
+    fi
+fi
+
+# Validate required variables
+if [[ -z "${GUAC_VERSION}" ]] || [[ -z "${GUAC_SOURCE_LINK}" ]]; then
+    echo -e "${LRED}Error: Could not determine Guacamole version. Please ensure GUAC_VERSION and GUAC_SOURCE_LINK are set.${NC}" 1>&2
+    exit 1
+fi
 
 echo
 echo -e "${GREYB}Installing OpenID Connect (SSO) authentication for Guacamole${NC}"
@@ -95,7 +138,15 @@ echo
 
 # Restart services
 echo -e "${GREY}Restarting Guacamole services...${GREY}"
-systemctl restart ${TOMCAT_VERSION}
+# Use tomcat service name (not version-based)
+if systemctl is-active --quiet tomcat 2>/dev/null; then
+    systemctl restart tomcat
+elif [[ -n "${TOMCAT_VERSION}" ]] && systemctl is-active --quiet ${TOMCAT_VERSION} 2>/dev/null; then
+    systemctl restart ${TOMCAT_VERSION}
+else
+    echo -e "${LYELLOW}Warning: Could not determine Tomcat service name, attempting 'tomcat'${GREY}"
+    systemctl restart tomcat 2>/dev/null || true
+fi
 systemctl restart guacd
 
 if [[ $? -ne 0 ]]; then
