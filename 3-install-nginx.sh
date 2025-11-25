@@ -78,6 +78,24 @@ server {
         proxy_set_header Connection \$http_connection;
         access_log off;
     }
+    location /manager/ {
+        proxy_pass $GUAC_URL/manager/;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$http_connection;
+        access_log off;
+    }
+    location /host-manager/ {
+        proxy_pass $GUAC_URL/host-manager/;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$http_connection;
+        access_log off;
+    }
 }
 EOF
 if [[ $? -ne 0 ]]; then

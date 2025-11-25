@@ -155,15 +155,25 @@ fi
 sudo mkdir -p /opt/${TOMCAT_VERSION}
 sudo tar xzf tomcat.tar.gz -C /opt/${TOMCAT_VERSION} --strip-components=1
 
+# Verify Manager and Host Manager webapps were extracted (they should be included by default)
+if [[ ! -d "/opt/${TOMCAT_VERSION}/webapps/manager" ]] || [[ ! -d "/opt/${TOMCAT_VERSION}/webapps/host-manager" ]]; then
+    echo -e "${LYELLOW}Warning: Manager or Host Manager webapps not found after extraction${GREY}"
+    echo -e "${LYELLOW}These should be included in the standard Tomcat distribution${GREY}"
+    echo -e "${LYELLOW}Listing webapps directory contents:${GREY}"
+    ls -la /opt/${TOMCAT_VERSION}/webapps/ 2>/dev/null || echo "webapps directory not found"
+fi
+
 sudo chown -R tomcat:tomcat /opt/${TOMCAT_VERSION}
 sudo sh -c 'chmod +x /opt/'${TOMCAT_VERSION}'/bin/*.sh'
 
 # Configure Tomcat Manager and Host Manager webapps
 echo -e "${GREY}Configuring Tomcat Manager and Host Manager webapps..."
 for webapp in manager host-manager; do
-    if [[ -d "/opt/${TOMCAT_VERSION}/webapps/${webapp}" ]]; then
+    webapp_dir="/opt/${TOMCAT_VERSION}/webapps/${webapp}"
+    if [[ -d "${webapp_dir}" ]]; then
+        echo -e "${GREY}Found ${webapp^} webapp, configuring access...${GREY}"
         # Configure context.xml to allow access
-        context_file="/opt/${TOMCAT_VERSION}/webapps/${webapp}/META-INF/context.xml"
+        context_file="${webapp_dir}/META-INF/context.xml"
         if [[ -f "${context_file}" ]]; then
             # Backup original context.xml
             sudo cp "${context_file}" "${context_file}.bak"
@@ -179,11 +189,21 @@ for webapp in manager host-manager; do
                 sudo sed -i '/<!-- <Valve className="org\.apache\.catalina\.valves\.RemoteAddrValve"/,/>/s/>$/ -->/' "${context_file}"
             fi
             echo -e "${LGREEN}${webapp^} webapp configured${GREY}"
+        else
+            echo -e "${LYELLOW}Warning: ${webapp^} context.xml not found at ${context_file}${GREY}"
         fi
     else
-        echo -e "${LYELLOW}Warning: ${webapp^} webapp not found in Tomcat installation${GREY}"
+        echo -e "${LYELLOW}Warning: ${webapp^} webapp not found at ${webapp_dir}${GREY}"
+        echo -e "${LYELLOW}Manager and Host Manager should be included in the Tomcat distribution by default${GREY}"
     fi
 done
+
+# Verify Manager and Host Manager webapps are present
+if [[ ! -d "/opt/${TOMCAT_VERSION}/webapps/manager" ]] || [[ ! -d "/opt/${TOMCAT_VERSION}/webapps/host-manager" ]]; then
+    echo -e "${LRED}Error: Manager or Host Manager webapps are missing from Tomcat installation${GREY}" 1>&2
+    echo -e "${LYELLOW}These webapps should be included in the standard Tomcat distribution${GREY}"
+    echo -e "${LYELLOW}Please verify the Tomcat tar.gz file is complete${GREY}"
+fi
 
 # Ensure proper ownership after configuration
 sudo chown -R tomcat:tomcat /opt/${TOMCAT_VERSION}
