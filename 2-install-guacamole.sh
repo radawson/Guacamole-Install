@@ -166,7 +166,11 @@ else
 fi
 
 # Download MySQL connector/j
-wget -q --show-progress -O mysql-connector-j-${MYSQLJCON}.tar.gz ${MYSQLJCON_SOURCE_LINK}
+if [[ -z "${MYSQLJCON_SOURCE_LINK}" ]]; then
+    echo -e "${LRED}MYSQLJCON_SOURCE_LINK is not set. Cannot download MySQL connector.${GREY}" 1>&2
+    exit 1
+fi
+wget -q --show-progress -O mysql-connector-j-${MYSQLJCON}.tar.gz "${MYSQLJCON_SOURCE_LINK}"
 if [[ $? -ne 0 ]]; then
     echo -e "${LRED}Failed to download mysql-connector-j-${MYSQLJCON}.tar.gz" 1>&2
     echo -e "${MYSQLJCON_SOURCE_LINK}${GREY}"

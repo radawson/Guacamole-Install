@@ -80,7 +80,7 @@ mkdir -p $DOWNLOAD_DIR
 mkdir -p $DB_BACKUP_DIR
 
 # GitHub download branch
-GITHUB="https://raw.githubusercontent.com/radawson/Guacamole-Install/main"
+GITHUB="https://raw.githubusercontent.com/radawson/Guacamole-Install/tog"
 
 # Version of Guacamole to install
 GUAC_VERSION="1.6.0"
@@ -743,8 +743,8 @@ export ID=$ID
 export VERSION_ID=$VERSION_ID
 export FREERDP=$FREERDP
 export VERSION_CODENAME=$VERSION_CODENAME
-export MYSQLJCON=$MYSQLJCON
-export MYSQLJCON_SOURCE_LINK=$MYSQLJCON_SOURCE_LINK
+export MYSQLJCON="${MYSQLJCON}"
+export MYSQLJCON_SOURCE_LINK="${MYSQLJCON_SOURCE_LINK}"
 export MYSQL_VERSION=$MYSQL_VERSION
 export MARIADB_SOURCE_LINK=$MARIADB_SOURCE_LINK
 export MYSQLSRV=$MYSQLSRV
